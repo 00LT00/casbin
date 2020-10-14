@@ -43,6 +43,7 @@ func (model Model) BuildIncrementalRoleLinks(rm rbac.RoleManager, op PolicyOp, s
 
 // BuildRoleLinks initializes the roles in RBAC.
 func (model Model) BuildRoleLinks(rm rbac.RoleManager) error {
+	model.PrintPolicy()
 	for _, ast := range model["g"] {
 		err := ast.buildRoleLinks(rm)
 		if err != nil {
@@ -55,6 +56,9 @@ func (model Model) BuildRoleLinks(rm rbac.RoleManager) error {
 
 // PrintPolicy prints the policy to log.
 func (model Model) PrintPolicy() {
+	if !log.GetLogger().IsEnabled() {
+		return
+	}
 	log.LogPrint("Policy:")
 	for key, ast := range model["p"] {
 		log.LogPrint(key, ": ", ast.Value, ": ", ast.Policy)
@@ -152,6 +156,21 @@ func (model Model) RemovePolicy(sec string, ptype string, rule []string) bool {
 	for i := index; i < len(model[sec][ptype].Policy); i++ {
 		model[sec][ptype].PolicyMap[strings.Join(model[sec][ptype].Policy[i], DefaultSep)] = i
 	}
+
+	return true
+}
+
+// UpdatePolicy updates a policy rule from the model.
+func (model Model) UpdatePolicy(sec string, ptype string, oldRule []string, newRule []string) bool {
+	oldPolicy := strings.Join(oldRule, DefaultSep)
+	index, ok := model[sec][ptype].PolicyMap[oldPolicy]
+	if !ok {
+		return false
+	}
+
+	model[sec][ptype].Policy[index] = newRule
+	delete(model[sec][ptype].PolicyMap, oldPolicy)
+	model[sec][ptype].PolicyMap[strings.Join(newRule, DefaultSep)] = index
 
 	return true
 }
